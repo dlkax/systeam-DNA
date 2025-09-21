@@ -200,7 +200,7 @@
         <div class="preview" id="preview">
             <img id="previewImg" alt="Preview">
             <br>
-            <button class="btn" onclick="analyzeImage()">🔬 Analisar Fóssil</button>
+            <button class="btn" onclick="analyzeImage()"> Analisar Fossil</button>
         </div>
         
         <div class="loading" id="loading">
@@ -211,7 +211,7 @@
         <div class="error" id="error"></div>
         
         <div class="results" id="results">
-            <h3>Resultados da Análise</h3>
+            <h3>Resultados da Analise</h3>
             <div id="resultsList"></div>
         </div>
     </div>
@@ -253,7 +253,7 @@
             }
             
             if (file.size > 10 * 1024 * 1024) {
-                showError('Arquivo muito grande. Máximo: 10MB');
+                showError('Arquivo muito grande. Maximo: 10MB');
                 return;
             }
             
@@ -291,10 +291,10 @@
                 if (data.success) {
                     showResults(data.predictions);
                 } else {
-                    showError(data.error || 'Erro na análise');
+                    showError(data.error || 'Erro na analise');
                 }
             } catch (error) {
-                showError('Erro de conexão. Verifique se o servidor está rodando.');
+                showError('Erro de conexao. Verifique se o servidor esta rodando.');
                 console.error('Erro:', error);
             }
             
