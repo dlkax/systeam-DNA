@@ -11,10 +11,14 @@
             box-sizing: border-box;
         }
         
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background-color: #f5f5f5;
             padding: 20px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
         
         .container {
@@ -34,6 +38,14 @@
         .header h1 {
             color: #2c3e50;
             margin-bottom: 10px;
+            font-weight: 600;
+            font-size: 2.5rem;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+            font-weight: 400;
         }
         
         .upload-area {
@@ -43,7 +55,23 @@
             text-align: center;
             cursor: pointer;
             margin-bottom: 20px;
-            transition: border-color 0.3s;
+            transition: all 0.3s ease;
+            background-color: #fafafa;
+        }
+        
+        .upload-area p {
+            margin: 8px 0;
+            font-weight: 500;
+        }
+        
+        .upload-area p:first-child {
+            font-size: 1.1rem;
+            color: #2c3e50;
+        }
+        
+        .upload-area p:last-child {
+            font-size: 0.9rem;
+            color: #7f8c8d;
         }
         
         .upload-area:hover {
@@ -190,7 +218,7 @@
 
     <script>
         let selectedFile = null;
-
+        
         const uploadArea = document.querySelector('.upload-area');
         const fileInput = document.getElementById('fileInput');
         
@@ -295,7 +323,7 @@
         }
         
         function formatSpeciesName(species) {
-
+    
             const names = {
                 'mammuthus_primigenius': 'Mammuthus primigenius (Mamute Lanoso)',
                 'smilodon_fatalis': 'Smilodon fatalis (Tigre Dente-de-sabre)',
