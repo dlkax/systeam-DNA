@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import tensorflow as tf
@@ -14,8 +13,20 @@ CORS(app)
 
 
 import os
-MODEL_PATH = os.path.join(os.path.dirname(__file__), 'saved_model', 'fossil_classifier.h5')
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+MODEL_PATH = os.path.join(parent_dir, 'saved_model', 'fossil_classifier.h5')
+
+
+if not os.path.exists(MODEL_PATH):
+    MODEL_PATH = os.path.join(current_dir, 'saved_model', 'fossil_classifier.h5')
+
+if not os.path.exists(MODEL_PATH):
+    MODEL_PATH = 'fossil_classifier.h5'
+
 model = None
+
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -24,6 +35,34 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def load_model():
     global model
     try:
+        print(f"Tentando carregar modelo de: {MODEL_PATH}")
+        
+        if not os.path.exists(MODEL_PATH):
+   
+            possible_paths = [
+                'saved_model/fossil_classifier.h5',
+                '../saved_model/fossil_classifier.h5', 
+                '../../saved_model/fossil_classifier.h5',
+                'fossil_classifier.h5',
+                'best_model.h5'
+            ]
+            
+            found_path = None
+            for path in possible_paths:
+                if os.path.exists(path):
+                    found_path = path
+                    break
+            
+            if found_path:
+                MODEL_PATH = found_path
+                print(f"Modelo encontrado em: {MODEL_PATH}")
+            else:
+                print("ERRO: Modelo não encontrado em nenhum local!")
+                print("Locais verificados:")
+                for path in possible_paths:
+                    print(f"  - {os.path.abspath(path)} {'(EXISTE)' if os.path.exists(path) else '(NÃO EXISTE)'}")
+                return False
+        
         model = keras.models.load_model(MODEL_PATH)
         print("Modelo carregado com sucesso!")
         return True
@@ -36,18 +75,16 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def preprocess_image(image):
-  
+
     IMG_SIZE = (128, 128)
 
     if image.mode != 'RGB':
         image = image.convert('RGB')
-    
-
+  
     image = image.resize(IMG_SIZE)
 
     img_array = np.array(image)
     img_array = np.expand_dims(img_array, axis=0)
-    
 
     img_array = img_array.astype('float32') / 255.0
     
@@ -446,26 +483,40 @@ def analyze_fossil():
         
         if model is None:
             return jsonify({'error': 'Modelo não carregado'}), 500
-        
 
         image = Image.open(io.BytesIO(file.read()))
         processed_image = preprocess_image(image)
-        
 
         predictions = model.predict(processed_image)
 
         try:
-            with open('model/labels.json', 'r', encoding='utf-8') as f:
-                labels_data = json.load(f)
+
+            labels_paths = [
+                os.path.join(parent_dir, 'model', 'labels.json'),
+                os.path.join(current_dir, 'model', 'labels.json'),
+                'model/labels.json'
+            ]
+            
+            labels_data = None
+            for path in labels_paths:
+                if os.path.exists(path):
+                    with open(path, 'r', encoding='utf-8') as f:
+                        labels_data = json.load(f)
+                    break
+            
+            if labels_data:
                 class_names = [labels_data['id_to_name'][str(i)] for i in range(labels_data['num_classes'])]
-        except:
-    
+            else:
+                raise FileNotFoundError("labels.json não encontrado")
+                
+        except Exception as e:
+            print(f"Aviso: Não foi possível carregar labels.json ({e}). Usando classes padrão.")
+
             class_names = [
                 'mammuthus_primigenius',
                 'smilodon_fatalis', 
                 'triceratops_horridus'
             ]
-        
 
         results = []
         for i, confidence in enumerate(predictions[0]):
@@ -473,8 +524,7 @@ def analyze_fossil():
                 'species': class_names[i],
                 'confidence': float(confidence * 100)
             })
-        
-   
+
         results.sort(key=lambda x: x['confidence'], reverse=True)
         
         return jsonify({
