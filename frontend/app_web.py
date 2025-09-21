@@ -7,6 +7,8 @@ from PIL import Image
 import io
 import os
 import json
+import sqlite3
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
@@ -104,11 +106,13 @@ def analyze_fossil():
 
         results.sort(key=lambda x: x['confidence'], reverse=True)
         
+        save_result(file.filename, main_prediction, results)
+
         return jsonify({
-            'success': True,
-            'predictions': results,
-            'main_prediction': results[0]
-        })
+    'success': True,
+    'predictions': results,
+    'main_prediction': main_prediction
+})
     
     except Exception as e:
         return jsonify({'error': f'Erro na análise: {str(e)}'}), 500
@@ -120,6 +124,70 @@ def health():
         'model_loaded': model is not None
     })
 
+
+@app.route('/history', methods=['GET'])
+def get_history():
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id, filename, species, confidence, predictions, created_at FROM analyses ORDER BY id DESC")
+    rows = cursor.fetchall()
+    conn.close()
+
+    history = []
+    for row in rows:
+        history.append({
+            "id": row[0],
+            "filename": row[1],
+            "species": row[2],
+            "confidence": row[3],
+            "predictions": json.loads(row[4]),
+            "created_at": row[5]
+        })
+
+    return jsonify(history)
+
+
 if __name__ == '__main__':
+    init_db()
     load_model()
     app.run(debug=True, host='0.0.0.0', port=5000)
+
+
+
+
+
+'''/ ----------------------DATABASE-------------------------------- /'''
+
+
+def init_db():
+    conn - sqlite3.connect("database.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS analyses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            filename TEXT,
+            species TEXT,
+            confidence REAL,
+            predictions TEXT,
+            created_at TEXT
+        )   
+    """)
+
+def save_result(filename, main_prediction, predictions):
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO analyses (filename, species, confidence, predictions, created_at)
+        VALUES (?, ?, ?, ?, ?)
+    """, (
+        filename, 
+        main_prediction["species"],
+        main_prediction["confidence"],
+        json.dumps(predictions, ensure_ascii=False),
+        datetime.now().isoformat()
+    ))
+
+    conn.comit()
+    conn.close()
