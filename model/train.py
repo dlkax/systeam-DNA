@@ -25,7 +25,7 @@ LABELS_FILE = "model/labels.json"
 LOGS_DIR = "logs"
 
 # Hiperparâmetros
-IMG_SIZE = (128, 128)
+IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 EPOCHS = 50  # Aumentado, mas com early stopping
 LEARNING_RATE = 0.001
