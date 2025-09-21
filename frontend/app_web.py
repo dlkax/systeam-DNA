@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify, render_template
+
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import tensorflow as tf
 from tensorflow import keras
@@ -13,10 +14,8 @@ CORS(app)
 
 
 import os
-MODEL_PATH = os.path.join(os.path.dirname(__file__), '..', 'saved_model', 'fossil_classifier.h5')
-
+MODEL_PATH = os.path.join(os.path.dirname(__file__), 'saved_model', 'fossil_classifier.h5')
 model = None
-
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -37,21 +36,22 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def preprocess_image(image):
-
-    IMG_SIZE = (224, 224)  
-    
+  
+    IMG_SIZE = (128, 128)
 
     if image.mode != 'RGB':
         image = image.convert('RGB')
     
 
     image = image.resize(IMG_SIZE)
-    
 
     img_array = np.array(image)
     img_array = np.expand_dims(img_array, axis=0)
+    
 
     img_array = img_array.astype('float32') / 255.0
+    
+    print(f"Shape da imagem processada: {img_array.shape}")
     
     return img_array
 
@@ -447,21 +447,26 @@ def analyze_fossil():
         if model is None:
             return jsonify({'error': 'Modelo não carregado'}), 500
         
-   
+
         image = Image.open(io.BytesIO(file.read()))
         processed_image = preprocess_image(image)
         
-     
+
         predictions = model.predict(processed_image)
+
+        try:
+            with open('model/labels.json', 'r', encoding='utf-8') as f:
+                labels_data = json.load(f)
+                class_names = [labels_data['id_to_name'][str(i)] for i in range(labels_data['num_classes'])]
+        except:
+    
+            class_names = [
+                'mammuthus_primigenius',
+                'smilodon_fatalis', 
+                'triceratops_horridus'
+            ]
         
- 
-        class_names = [
-            'mammuthus_primigenius',
-            'smilodon_fatalis', 
-            'triceratops_horridus'
-        ]
-        
-   
+
         results = []
         for i, confidence in enumerate(predictions[0]):
             results.append({
@@ -469,7 +474,7 @@ def analyze_fossil():
                 'confidence': float(confidence * 100)
             })
         
-
+   
         results.sort(key=lambda x: x['confidence'], reverse=True)
         
         return jsonify({
