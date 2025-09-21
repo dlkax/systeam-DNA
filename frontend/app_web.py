@@ -7,13 +7,14 @@ from PIL import Image
 import io
 import os
 import json
-import sqlite3
-from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
 
+
 MODEL_PATH = 'saved_model/fossil_classifier.h5'  
+model = None
+
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -24,25 +25,27 @@ def load_model():
     try:
         model = keras.models.load_model(MODEL_PATH)
         print("Modelo carregado com sucesso!")
+        return True
     except Exception as e:
         print(f"Erro ao carregar modelo: {e}")
         model = None
+        return False
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def preprocess_image(image):
-   
+
     IMG_SIZE = (224, 224)  
-  
+
     if image.mode != 'RGB':
         image = image.convert('RGB')
- 
+
     image = image.resize(IMG_SIZE)
-    
+
     img_array = np.array(image)
     img_array = np.expand_dims(img_array, axis=0)
-    
+
     img_array = img_array.astype('float32') / 255.0
     
     return img_array
@@ -80,22 +83,18 @@ def analyze_fossil():
         
         if model is None:
             return jsonify({'error': 'Modelo não carregado'}), 500
-        
 
         image = Image.open(io.BytesIO(file.read()))
         processed_image = preprocess_image(image)
         
-
         predictions = model.predict(processed_image)
         
-
         class_names = [
             'mammuthus_primigenius',
             'smilodon_fatalis', 
             'triceratops_horridus'
         ]
         
-
         results = []
         for i, confidence in enumerate(predictions[0]):
             results.append({
@@ -103,16 +102,13 @@ def analyze_fossil():
                 'confidence': float(confidence * 100)
             })
         
-
         results.sort(key=lambda x: x['confidence'], reverse=True)
         
-        save_result(file.filename, main_prediction, results)
-
         return jsonify({
-    'success': True,
-    'predictions': results,
-    'main_prediction': main_prediction
-})
+            'success': True,
+            'predictions': results,
+            'main_prediction': results[0]
+        })
     
     except Exception as e:
         return jsonify({'error': f'Erro na análise: {str(e)}'}), 500
@@ -124,70 +120,15 @@ def health():
         'model_loaded': model is not None
     })
 
-
-@app.route('/history', methods=['GET'])
-def get_history():
-    conn = sqlite3.connect("database.db")
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT id, filename, species, confidence, predictions, created_at FROM analyses ORDER BY id DESC")
-    rows = cursor.fetchall()
-    conn.close()
-
-    history = []
-    for row in rows:
-        history.append({
-            "id": row[0],
-            "filename": row[1],
-            "species": row[2],
-            "confidence": row[3],
-            "predictions": json.loads(row[4]),
-            "created_at": row[5]
-        })
-
-    return jsonify(history)
-
-
 if __name__ == '__main__':
-    init_db()
-    load_model()
-    app.run(debug=True, host='0.0.0.0', port=5000)
-
-
-
-
-
-'''/ ----------------------DATABASE-------------------------------- /'''
-
-
-def init_db():
-    conn - sqlite3.connect("database.db")
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS analyses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            filename TEXT,
-            species TEXT,
-            confidence REAL,
-            predictions TEXT,
-            created_at TEXT
-        )   
-    """)
-
-def save_result(filename, main_prediction, predictions):
-    conn = sqlite3.connect("database.db")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        INSERT INTO analyses (filename, species, confidence, predictions, created_at)
-        VALUES (?, ?, ?, ?, ?)
-    """, (
-        filename, 
-        main_prediction["species"],
-        main_prediction["confidence"],
-        json.dumps(predictions, ensure_ascii=False),
-        datetime.now().isoformat()
-    ))
-
-    conn.comit()
-    conn.close()
+    print("Iniciando Pleistocene Life Analyzer...")
+    print("Carregando modelo...")
+    
+    if load_model():
+        print("✅ Modelo carregado com sucesso!")
+        print("🚀 Servidor iniciando em http://localhost:5000")
+        app.run(debug=True, host='0.0.0.0', port=5000)
+    else:
+        print("❌ Erro ao carregar modelo. Verifique o caminho do arquivo.")
+        print(f"Procurando por: {MODEL_PATH}")
+        print("Certifique-se de que o arquivo existe.")
