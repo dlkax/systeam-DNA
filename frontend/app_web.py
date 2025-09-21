@@ -37,37 +37,32 @@ def load_model():
     try:
         print(f"Tentando carregar modelo de: {MODEL_PATH}")
         
-        if not os.path.exists(MODEL_PATH):
-   
-            possible_paths = [
-                'saved_model/fossil_classifier.h5',
-                '../saved_model/fossil_classifier.h5', 
-                '../../saved_model/fossil_classifier.h5',
-                'fossil_classifier.h5',
-                'best_model.h5'
-            ]
-            
-            found_path = None
-            for path in possible_paths:
-                if os.path.exists(path):
-                    found_path = path
-                    break
-            
-            if found_path:
-                MODEL_PATH = found_path
-                print(f"Modelo encontrado em: {MODEL_PATH}")
-            else:
-                print("ERRO: Modelo não encontrado em nenhum local!")
-                print("Locais verificados:")
-                for path in possible_paths:
-                    print(f"  - {os.path.abspath(path)} {'(EXISTE)' if os.path.exists(path) else '(NÃO EXISTE)'}")
-                return False
-        
-        model = keras.models.load_model(MODEL_PATH)
-        print("Modelo carregado com sucesso!")
+        search_paths = [
+            MODEL_PATH,
+            os.path.join(parent_dir, 'saved_model', 'fossil_classifier.h5'),
+            os.path.join(current_dir, 'saved_model', 'fossil_classifier.h5'),
+            'fossil_classifier.h5',
+            'best_model.h5'
+        ]
+
+        found_path = None
+        for path in search_paths:
+            if os.path.exists(path):
+                found_path = path
+                break
+
+        if not found_path:
+            print("❌ Modelo não encontrado em nenhum local!")
+            for path in search_paths:
+                print(f"  - {os.path.abspath(path)} {'(EXISTE)' if os.path.exists(path) else '(NÃO EXISTE)'}")
+            return False
+
+        print(f"✅ Modelo encontrado em: {found_path}")
+        model = keras.models.load_model(found_path)
         return True
+
     except Exception as e:
-        print(f"Erro ao carregar modelo: {e}")
+        print(f"❌ Erro ao carregar modelo: {e}")
         model = None
         return False
 
