@@ -1,33 +1,32 @@
-import tensorflow as tf
 from tensorflow.keras import layers, models
+from tensorflow.keras.applications import EfficientNetB0
 
-def create_model(num_classes: int):
-    model = models.Sequential([
+def create_model(num_classes: int, input_shape=(224,224,3), pretrained=True):
+    """Cria o modelo CNN com EfficientNetB0 como backbone"""
 
-        layers.Rescaling(1./255, input_shape=(128, 128, 3)),
+    if pretrained:
+        weights = 'imagenet'
+    else:
+        weights = None
 
-        layers.Conv2D(32, (3, 3), activation='relu'),
-        layers.MaxPooling2D(pool_size=(2, 2)),
-
-        layers.Conv2D(64, (3, 3), activation='relu'),
-        layers.MaxPooling2D(pool_size=(2, 2)),
-
-        layers.Conv2D(128, (3, 3), activation='relu'),
-        layers.MaxPooling2D(pool_size=(2, 2)),
-
-        layers.Dropout(0.3),
-
-        layers.Flatten(),
-        layers.Dense(128, activation='relu'),
-        layers.Dropout(0.2),
-        layers.Dense(num_classes, activation='softmax')  
-    ])
-
-
-    model.compile(
-        optimizer='adam',
-        loss='sparse_categorical_crossentropy',
-        metrics=['accuracy']
+    # Backbone EfficientNetB0
+    base_model = EfficientNetB0(
+        include_top=False,
+        weights=weights,
+        input_shape=input_shape,
+        pooling='avg'  # GlobalAveragePooling no final
     )
+
+    # Congelar o backbone se quiser fine-tuning gradual
+    if pretrained:
+        base_model.trainable = False
+
+    model = models.Sequential([
+        base_model,
+        layers.Dropout(0.3),
+        layers.Dense(256, activation='relu'),
+        layers.Dropout(0.3),
+        layers.Dense(num_classes, activation='softmax')
+    ])
 
     return model

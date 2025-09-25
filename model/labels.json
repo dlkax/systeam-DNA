@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "created_at": "2025-09-18T20:30:43.803068",
+  "created_at": "2025-09-24T23:00:01.945746",
   "num_classes": 2,
   "id_to_name": {
     "0": "mammuthus_primigenius",
@@ -12,8 +12,8 @@
   },
   "config": {
     "img_size": [
-      128,
-      128
+      224,
+      224
     ],
     "batch_size": 32,
     "epochs": 50,
